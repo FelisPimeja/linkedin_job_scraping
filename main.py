@@ -4,7 +4,7 @@ import pandas as pd
 import time
 
 # url = "https://www.google.com"
-url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Netherlands&geoId=&trk=public_jobs_jobs-search-bar_search-submit&position=1&pageNum=0'
+url = 'https://www.linkedin.com/jobs/search/?currentJobId=3354264177&geoId=102890719&keywords=gis%20OR%20geo&location=Netherlands&refresh=true'
 
 
 proxy = 'localhost:9051'
@@ -16,7 +16,7 @@ wd = webdriver.Chrome(options=options)
 wd.get(url)
 
 # test_value = driver.find_element(By.CSS_SELECTOR, 'input.gNO89b').get_attribute('value') #Тест для гугла
-no_of_jobs = int(wd.find_element(By.CSS_SELECTOR, 'h1>span').text)
+no_of_jobs = int(wd.find_element(By.CSS_SELECTOR, 'h1>span').text.replace(' ', ''))
 print(no_of_jobs)
 
 
