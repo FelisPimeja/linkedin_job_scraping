@@ -3,31 +3,44 @@ from selenium.webdriver.common.by import By
 import pandas as pd
 import time
 
-# url = "https://www.google.com"
-url = 'https://www.linkedin.com/jobs/search/?currentJobId=3354264177&geoId=102890719&keywords=gis%20OR%20geo&location=Netherlands&refresh=true'
 
+# url = "https://www.google.com"
+
+# GIS in Netherlands:
+# url = 'https://www.linkedin.com/jobs/search/?currentJobId=3354264177&geoId=102890719&keywords=gis%20OR%20geo&location=Netherlands&refresh=true'
+# Postgis in Netherlands:
+url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Netherlands'
+# fme in Netherlands:
+# url = 'https://www.linkedin.com/jobs/search?keywords=fme&location=Netherlands'
 
 proxy = 'localhost:9051'
 options = webdriver.ChromeOptions()
+# Без запуска окна браузера:
 options.add_argument('--headless')
+# Чтобы LinkedIn не переводил отдельные элементы на русский:
+options.add_argument("--lang=en-GB")
+# Запуск через проки Тора:
 options.add_argument('--proxy-server=socks5://' + proxy)
+# Чтобы не мусорить в консоль:
+options.add_experimental_option('excludeSwitches', ['enable-logging'])
 
 wd = webdriver.Chrome(options=options)
 wd.get(url)
 
 # test_value = driver.find_element(By.CSS_SELECTOR, 'input.gNO89b').get_attribute('value') #Тест для гугла
 no_of_jobs = int(wd.find_element(By.CSS_SELECTOR, 'h1>span').text.replace(' ', ''))
-print(no_of_jobs)
+
+print('no_of_jobs = ' + str(no_of_jobs))
 
 
 # -----------------------------------------------------------------------
 
 i = 2
-while i <= int(no_of_jobs/25)+1:
+while i <= int(no_of_jobs/25) + 1:
     wd.execute_script('window.scrollTo(0, document.body.scrollHeight);')
     i = i + 1
     try:
-        wd.find_element_by_xpath('/html/body/main/div/section/button').click()
+        wd.find_element(By.XPATH, '/html/body/main/div/section/button').click()
         time.sleep(5)
     except:
         pass
@@ -39,8 +52,8 @@ job_lists = wd.find_element(By.CSS_SELECTOR, '.jobs-search__results-list')
 
 jobs = job_lists.find_elements(By.CSS_SELECTOR, 'li') # return a list
 
-# print(jobs)
-# print(len(jobs))
+# print('jobs' + jobs[0].text)
+print('len(jobs) = ' + str(len(jobs)))
 
 len(jobs)
 
@@ -53,33 +66,36 @@ location = []
 date = []
 job_link = []
 for job in jobs:
-    job_id0 = job.find_element(By.CSS_SELECTOR, 'div').get_attribute('data-entity-urn')
+    job_id0 = str(job.find_element(By.CSS_SELECTOR, '.base-card').get_attribute('data-entity-urn')).split(sep=':')[-1]
     # print(job_id0)
     job_id.append(job_id0)
 
-    job_title0 = job.find_element(By.CSS_SELECTOR, 'div>a>span.sr-only').text
-    print(job_title0)
-    #
-    # job_title.append(job_title0)
+    job_title0 = job.find_element(By.CSS_SELECTOR, '.base-search-card__info>h3').text
+    # print(job_title0)
+    job_title.append(job_title0)
 
-    # company_name0 = job.find_element(By.CSS_SELECTOR, 'h4').get_attribute('innerText')
-    # company_name.append(company_name0)
-    #
-    # location0 = job.find_element(By.CSS_SELECTOR, '.job-result-card__location').get_attribute('innerText')
-    # location.append(location0)
-    #
-    # date0 = job.find_element(By.CSS_SELECTOR, 'div > div > time').get_attribute('innerText')
-    # date.append(date0)
-    #
-    # job_link0 = job.find_element(By.CSS_SELECTOR, 'a').get_attribute('href')
-    # job_link.append(job_link0)
-    #
-    #
-    #
-    #
-    #
-    #
-    #
+    company_name0 = job.find_element(By.CSS_SELECTOR, '.base-search-card__info>h4').text
+    # print(company_name0)
+    company_name.append(company_name0)
+
+    location0 = job.find_element(By.CSS_SELECTOR, '.job-search-card__location').text
+    # print(location0)
+    location.append(location0)
+
+    date0 = job.find_element(By.CSS_SELECTOR, '[class*="job-search-card__listdate"]').get_attribute('datetime')
+    # print(date0)
+    date.append(date0)
+
+    job_link0 = job.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').split(sep='?')[0]
+    print(job_link0)
+    job_link.append(job_link0)
+
+
+
+
+
+
+
     # jd =[]
     # seniority =[]
     # emp_type =[]
