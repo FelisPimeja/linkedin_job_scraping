@@ -8,7 +8,7 @@ import time
 # url = "https://www.google.com"
 
 # GIS in Netherlands:
-# url = 'https://www.linkedin.com/jobs/search/?currentJobId=3354264177&geoId=102890719&keywords=gis%20OR%20geo&location=Netherlands&refresh=true'
+# url = 'https://www.linkedin.com/jobs/search/?keywords=gis%20OR%20geo&location=Netherlands'
 # Postgis in Netherlands:
 url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Netherlands'
 # fme in Netherlands:
@@ -41,8 +41,6 @@ try:
 except NoSuchElementException:
     print('Something went wrong (check connection!)')
 
-
-
 # -----------------------------------------------------------------------
 
 i = 2
@@ -56,17 +54,12 @@ while i <= int(no_of_jobs/25) + 1:
         pass
         time.sleep(5)
 
-
-
 job_lists = wd.find_element(By.CSS_SELECTOR, '.jobs-search__results-list')
 
 jobs = job_lists.find_elements(By.CSS_SELECTOR, 'li') # return a list
 
 # print('jobs' + jobs[0].text)
-print('len(jobs) = ' + str(len(jobs)))
-
-len(jobs)
-
+print(str(len(jobs)) + ' jobs found \nProcessing base info:')
 
 
 job_id = []
@@ -84,7 +77,6 @@ for job in jobs:
     # print(job_id0)
     job_id.append(job_id0)
 
-
     job_title0 = None
     try:
         job_title0 = job.find_element(By.CSS_SELECTOR, '.base-search-card__info>h3').text
@@ -100,7 +92,6 @@ for job in jobs:
         pass
     # print(company_name0)
     company_name.append(company_name0)
-
 
     location0 = None
     try:
@@ -118,7 +109,6 @@ for job in jobs:
     # print(date0)
     date.append(date0)
 
-
     job_link0 = None
     try:
         job_link0 = job.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').split(sep='?')[0]
@@ -128,7 +118,7 @@ for job in jobs:
     job_link.append(job_link0)
 
 
-
+print('Gathering details')
 
 jd =[]
 seniority =[]
@@ -138,15 +128,16 @@ industries =[]
 for item in range(len(jobs)):
     job_func0 = []
 
-
     industries0 = []
     # clicking job to view job details
     job_click_path = f' // ul[contains(@class, "jobs-search__results-list")] / li[{item + 1}] // *'
 
-
-    job_click = job.find_element(By.XPATH, job_click_path).click()
-    # print(job_click.text)
-    time.sleep(2)
+    try:
+        job.find_element(By.XPATH, job_click_path).click()
+        # print(job_click.text)
+        time.sleep(2)
+    except:
+        print('Something went wrong (can not click job title to get job details)')
 
     jd_path = ' //div[contains(@class, "description__text--rich")]'
     jd0 = None
@@ -167,7 +158,6 @@ for item in range(len(jobs)):
 
     seniority.append(seniority0)
 
-
     emp_type_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[2] // span'
     emp_type0 = None
     try:
@@ -177,7 +167,6 @@ for item in range(len(jobs)):
         pass
 
     emp_type.append(emp_type0)
-
 
     job_func_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[3] // span'
     job_func_elements_final = None
@@ -191,36 +180,44 @@ for item in range(len(jobs)):
 
     job_func.append(job_func_elements_final)
 
-
     industries_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[4] // span'
     industries_elements_final = None
     try:
         industries_elements = job.find_element(By.XPATH, industries_path).get_attribute('innerText')
         industries_elements_list = industries_elements.replace('and ', ',').replace(', ,', ',').split(sep=',')
         industries_elements_final = [s.strip() for s in industries_elements_list]
-        print(industries_elements_final)
+        # print(industries_elements_final)
     except NoSuchElementException:
         pass
 
     industries.append(industries_elements_final)
-
-
-    industries_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[4] // span'
-    industries_elements_final = None
-    try:
-        industries_elements = job.find_element(By.XPATH, industries_path).get_attribute('innerText')
-        industries_elements_list = industries_elements.replace('and ', ',').replace(', ,', ',').split(sep=',')
-        industries_elements_final = [s.strip() for s in industries_elements_list]
-        print(industries_elements_final)
-    except NoSuchElementException:
-        pass
-
-    industries.append(industries_elements_final)
-
 
     # Проверяем текущую страницу:
     # get_url = wd.current_url
     # print("The current url is:" + str(get_url))
+
+    print(item + 1)
+
+# print(len(job_id), len(date), len(company_name), len(job_title), len(location), len(jd), len(seniority), len(emp_type), len(job_func), len(industries), len(job_link) )
+
+
+job_data = pd.DataFrame({
+    'ID': job_id,
+    'Date': date,
+    'Company': company_name,
+    'Title': job_title,
+    'Location': location,
+    'Description': jd,
+    'Level': seniority,
+    'Type': emp_type,
+    'Function': job_func,
+    'Industry': industries,
+    'Link': job_link
+})
+
+# cleaning description column
+job_data['Description'] = job_data['Description'].str.replace('\n', ' ')
+job_data.to_excel('LinkedIn Job Data_Data Scientist.xlsx', index=False)
 
 # print(emp_type)
 # print(seniority)
