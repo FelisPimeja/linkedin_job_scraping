@@ -185,7 +185,7 @@ for item in range(len(jobs)):
         job_func_elements = job.find_element(By.XPATH, job_func_path).get_attribute('innerText')
         job_func_elements_list = job_func_elements.replace('and ', ',').replace(', ,', ',').split(sep=',')
         job_func_elements_final = [s.strip() for s in job_func_elements_list]
-        print(job_func_elements_final)
+        # print(job_func_elements_final)
     except NoSuchElementException:
         pass
 
@@ -199,10 +199,23 @@ for item in range(len(jobs)):
     # industries_final = ', '.join(industries0)
     # industries.append(industries_final)
 
+    industries_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[4] // span'
+    industries_elements_final = None
+    try:
+        industries_elements = job.find_element(By.XPATH, industries_path).get_attribute('innerText')
+        industries_elements_list = industries_elements.replace('and ', ',').replace(', ,', ',').split(sep=',')
+        industries_elements_final = [s.strip() for s in industries_elements_list]
+        print(industries_elements_final)
+    except NoSuchElementException:
+        pass
+
+    industries.append(industries_elements_final)
+
+
     # Проверяем текущую страницу:
     # get_url = wd.current_url
     # print("The current url is:" + str(get_url))
 
-print(emp_type)
-print(seniority)
-print(job_func)
+# print(emp_type)
+# print(seniority)
+# print(job_func)
