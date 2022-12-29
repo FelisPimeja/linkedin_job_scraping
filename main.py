@@ -192,12 +192,18 @@ for item in range(len(jobs)):
     job_func.append(job_func_elements_final)
 
 
-    # industries_path = ' / html / body / main / section / div[2] / section[2] / ul / li[4] / span'
-    # industries_elements = job.find_elements_by_xpath(industries_path)
-    # for element in industries_elements:
-    #     industries0.append(element.get_attribute('innerText'))
-    # industries_final = ', '.join(industries0)
-    # industries.append(industries_final)
+    industries_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[4] // span'
+    industries_elements_final = None
+    try:
+        industries_elements = job.find_element(By.XPATH, industries_path).get_attribute('innerText')
+        industries_elements_list = industries_elements.replace('and ', ',').replace(', ,', ',').split(sep=',')
+        industries_elements_final = [s.strip() for s in industries_elements_list]
+        print(industries_elements_final)
+    except NoSuchElementException:
+        pass
+
+    industries.append(industries_elements_final)
+
 
     industries_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[4] // span'
     industries_elements_final = None
