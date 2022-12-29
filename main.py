@@ -2,15 +2,26 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import NoSuchElementException
 import pandas as pd
+# import click
 import time
+from sqlalchemy import create_engine
+from sqlalchemy import types
 
+# import environmental variables:
+env_vars = {}
+with open('./.env') as f:
+    for line in f:
+        if line.startswith('#') or not line.strip():
+            continue
+        key, value = line.strip().split('=', 1)
+        env_vars[key] = value # Save to a dict, initialized env_vars = {}
 
 # url = "https://www.google.com"
 
 # GIS in Netherlands:
-# url = 'https://www.linkedin.com/jobs/search/?keywords=gis%20OR%20geo&location=Netherlands'
+url = 'https://www.linkedin.com/jobs/search/?keywords=gis%20OR%20geo&location=Netherlands'
 # Postgis in Netherlands:
-url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Netherlands'
+# url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Netherlands'
 # fme in Netherlands:
 # url = 'https://www.linkedin.com/jobs/search?keywords=fme&location=Netherlands'
 
@@ -36,8 +47,8 @@ wd.get(url)
 no_of_jobs = None
 try:
     # no_of_jobs = driver.find_element(By.CSS_SELECTOR, 'input.gNO89b').get_attribute('value') #Тест для гугла
-    no_of_jobs = int(wd.find_element(By.CSS_SELECTOR, 'h1>span').text.replace(' ', ''))
-    print('no_of_jobs = ' + str(no_of_jobs))
+    no_of_jobs = int(wd.find_element(By.CSS_SELECTOR, 'h1>span').text.replace(' ', '').replace('+', '').replace(',', ''))
+    print(str(no_of_jobs) + ' jobs found. Preprocessing titles list...')
 except NoSuchElementException:
     print('Something went wrong (check connection!)')
 
@@ -49,10 +60,10 @@ while i <= int(no_of_jobs/25) + 1:
     i = i + 1
     try:
         wd.find_element(By.XPATH, '/html/body/main/div/section/button').click()
-        time.sleep(5)
+        time.sleep(2)
     except:
         pass
-        time.sleep(5)
+        time.sleep(2)
 
 job_lists = wd.find_element(By.CSS_SELECTOR, '.jobs-search__results-list')
 
@@ -135,7 +146,7 @@ for item in range(len(jobs)):
     try:
         job.find_element(By.XPATH, job_click_path).click()
         # print(job_click.text)
-        time.sleep(2)
+        time.sleep(1)
     except:
         print('Something went wrong (can not click job title to get job details)')
 
@@ -202,22 +213,45 @@ for item in range(len(jobs)):
 
 
 job_data = pd.DataFrame({
-    'ID': job_id,
-    'Date': date,
-    'Company': company_name,
-    'Title': job_title,
-    'Location': location,
-    'Description': jd,
-    'Level': seniority,
-    'Type': emp_type,
-    'Function': job_func,
-    'Industry': industries,
-    'Link': job_link
+    'id': job_id,
+    'date': date,
+    'company': company_name,
+    'title': job_title,
+    'location': location,
+    'description': jd,
+    'level': seniority,
+    'type': emp_type,
+    'function': job_func,
+    'industry': industries,
+    'link': job_link
 })
 
 # cleaning description column
 job_data['Description'] = job_data['Description'].str.replace('\n', ' ')
-job_data.to_excel('LinkedIn Job Data_Data Scientist.xlsx', index=False)
+job_data.to_excel('gis_jobs.xlsx', index=False)
+
+# Write data into Postgres
+connection = create_engine(f'postgresql://{env_vars["user"]}:{env_vars["password"]}@{env_vars["host"]}:'
+                           f'{env_vars["port"]}/{env_vars["dbname"]}')
+
+job_data.to_sql('open_positions', con=connection, schema='linkedin', if_exists='append',
+              dtype={
+                  "id": types.BigInteger(),
+                  "date": types.Date(),
+                  "company": types.Text(),
+                  "title": types.Text(),
+                  "location": types.Text(),
+                  "description": types.Text(),
+                  "level": types.Text(),
+                  "type": types.Text(),
+                  "function": types.ARRAY(types.Text),
+                  "industry": types.ARRAY(types.Text),
+                  "link": types.Text()
+              })
+
+# conn = psycopg2.connect(dbname='postgres', user='postgres',
+#                         password='gK7mRpyL', host='localhost')
+# cursor = conn.cursor()
 
 # print(emp_type)
 # print(seniority)
