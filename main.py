@@ -149,8 +149,12 @@ for item in range(len(jobs)):
     time.sleep(2)
 
     jd_path = ' //div[contains(@class, "description__text--rich")]'
-    jd0 = job.find_element(By.XPATH, jd_path).get_attribute('innerText')
-    # print(jd0)
+    jd0 = None
+    try:
+        jd0 = job.find_element(By.XPATH, jd_path).get_attribute('innerText')
+        # print(jd0)
+    except NoSuchElementException:
+        pass
     jd.append(jd0)
 
     seniority_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[1] // span'
@@ -174,13 +178,20 @@ for item in range(len(jobs)):
 
     emp_type.append(emp_type0)
 
-    #
-    # job_func_path = ' / html / body / main / section / div[2] / section[2] / ul / li[3] / span'
-    # job_func_elements = job.find_elements_by_xpath(job_func_path)
-    # for element in job_func_elements:
-    #     job_func0.append(element.get_attribute('innerText'))
-    # job_func_final = ', '.join(job_func0)
-    # job_func.append(job_func_final)
+
+    job_func_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[3] // span'
+    job_func_elements_final = None
+    try:
+        job_func_elements = job.find_element(By.XPATH, job_func_path).get_attribute('innerText')
+        job_func_elements_list = job_func_elements.replace('and ', ',').replace(', ,', ',').split(sep=',')
+        job_func_elements_final = [s.strip() for s in job_func_elements_list]
+        print(job_func_elements_final)
+    except NoSuchElementException:
+        pass
+
+    job_func.append(job_func_elements_final)
+
+
     # industries_path = ' / html / body / main / section / div[2] / section[2] / ul / li[4] / span'
     # industries_elements = job.find_elements_by_xpath(industries_path)
     # for element in industries_elements:
@@ -194,3 +205,4 @@ for item in range(len(jobs)):
 
 print(emp_type)
 print(seniority)
+print(job_func)
