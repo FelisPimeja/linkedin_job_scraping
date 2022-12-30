@@ -22,16 +22,15 @@ with open('./.env') as f:
         key, value = line.strip().split('=', 1)
         env_vars[key] = value # Save to a dict, initialized env_vars = {}
 
-# url = "https://www.google.com"
+#  Generate target urls:
+base_url = 'https://www.linkedin.com/jobs/search/'
+key_words = ['gis', 'geo', 'postgis', 'fme', 'qgis', 'arcgis', 'geospatial']
+localions = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Germany', 'Ireland']
 
-# GIS in Netherlands:
-# url = 'https://www.linkedin.com/jobs/search/?keywords=gis%20OR%20geo&location=Netherlands'
-# Postgis in Netherlands:
-url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Netherlands'
-# Postgis in Belgium:
-# url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Belgium'
-# fme in Netherlands:
-# url = 'https://www.linkedin.com/jobs/search?keywords=fme&location=Netherlands'
+url_list = [f'{base_url}?keywords={word}&location={location}'
+            for word, location in itertools.product(key_words, localions)]
+
+url = url_list[14]
 
 proxy = 'localhost:9051'
 service = Service(env_vars['chromedriver_path'])
