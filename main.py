@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
+from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 from selenium.common.exceptions import StaleElementReferenceException
 from selenium.webdriver.support import expected_conditions
@@ -51,21 +52,21 @@ options.add_experimental_option("detach", True)
 
 wd = webdriver.Chrome(options=options, service=service)
 wd.get(url)
-ignored_exceptions = (NoSuchElementException, StaleElementReferenceException)
+ignored_exceptions = (NoSuchElementException, StaleElementReferenceException, TimeoutException)
+elem = WebDriverWait(wd, timeout=5, ignored_exceptions=ignored_exceptions)
 
-# Close cookies warning for easier debugging
-cookies_button_path = 'button.artdeco-global-alert-action'
-accept_cookies_button = WebDriverWait(wd, timeout=10, ignored_exceptions=ignored_exceptions) \
-    .until(expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, cookies_button_path)))
-accept_cookies_button.click()
+# Close cookies and 'sign in' messages for easier debugging
+accept_cookies_button = elem.until(
+    expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, 'button.artdeco-global-alert-action'))).click()
 
-no_of_jobs = None
-try:
-    # no_of_jobs = driver.find_element(By.CSS_SELECTOR, 'input.gNO89b').get_attribute('value') #Тест для гугла
-    no_of_jobs = int(wd.find_element(By.CSS_SELECTOR, 'h1>span').text.replace(' ', '').replace('+', '').replace(',', ''))
-    print(str(no_of_jobs) + ' jobs found. Preprocessing titles list...')
-except NoSuchElementException:
-    print('Something went wrong (check connection!)')
+close_signin_button = elem.until(
+    expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, 'button.cta-modal__dismiss-btn'))).click()
+
+# Get number of Job positions to parse
+no_of_jobs_str = elem.until(
+    expected_conditions.presence_of_element_located((By.CSS_SELECTOR, 'h1>span')))
+no_of_jobs = int(no_of_jobs_str.text.replace(' ', '').replace('+', '').replace(',', ''))
+print(str(no_of_jobs) + ' jobs found. Preprocessing titles list...')
 
 # -----------------------------------------------------------------------
 
@@ -164,18 +165,6 @@ for item in range(len(jobs)):
         time.sleep(2)
     except:
         print('Something went wrong (can not click job title to get job details)')
-
-    # my_element_id = 'something123'
-    # ignored_exceptions = (NoSuchElementException, StaleElementReferenceException)
-    # your_element = WebDriverWait(your_driver, some_timeout, ignored_exceptions=ignored_exceptions) \
-    #     .until(expected_conditions.presence_of_element_located((By.ID, my_element_id)))
-
-    # ignored_exceptions = (NoSuchElementException, StaleElementReferenceException)
-    # job_element = WebDriverWait(wd, timeout=1, ignored_exceptions=ignored_exceptions) \
-    #     .until(expected_conditions.presence_of_element_located((By.XPATH, job_click_path)))
-    # job_element.click()
-    # time.sleep(2)
-
 
     jd_path = ' //div[contains(@class, "description__text--rich")]'
     jd0 = None
