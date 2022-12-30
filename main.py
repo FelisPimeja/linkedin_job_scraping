@@ -27,11 +27,11 @@ with open('./.env') as f:
 # GIS in Netherlands:
 # url = 'https://www.linkedin.com/jobs/search/?keywords=gis%20OR%20geo&location=Netherlands'
 # Postgis in Netherlands:
-# url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Netherlands'
+url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Netherlands'
 # Postgis in Belgium:
 # url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Belgium'
 # fme in Netherlands:
-url = 'https://www.linkedin.com/jobs/search?keywords=fme&location=Netherlands'
+# url = 'https://www.linkedin.com/jobs/search?keywords=fme&location=Netherlands'
 
 proxy = 'localhost:9051'
 service = Service(env_vars['chromedriver_path'])
@@ -61,9 +61,18 @@ options.add_experimental_option("prefs", prefs)
 
 
 wd = webdriver.Chrome(options=options, service=service)
+# Load page
 wd.get(url)
+
+# Test that we are not redirected to auth page
+meta_path = ' / html / head / meta [contains(@name, "pageKey")]'
+meta_content = wd.find_element(By.XPATH, meta_path).get_attribute('content')
+if meta_content == 'auth_wall_desktop_jserp':
+    wd.get(url)
+
+
 ignored_exceptions = (NoSuchElementException, StaleElementReferenceException, TimeoutException)
-elem = WebDriverWait(wd, timeout=5, ignored_exceptions=ignored_exceptions)
+elem = WebDriverWait(wd, timeout=10, ignored_exceptions=ignored_exceptions)
 
 # Close cookies and 'sign in' messages for easier debugging
 try:
@@ -171,8 +180,7 @@ for item in range(len(jobs)):
     job_click_path = f' // ul[contains(@class, "jobs-search__results-list")] / li[{item + 1}] // *'
     try:
         job.find_element(By.XPATH, job_click_path).click()
-        # print(job_click.text)
-        time.sleep(2)
+        time.sleep(1)
     except:
         print('Something went wrong (can not click job title to get job details)')
 
@@ -181,23 +189,30 @@ for item in range(len(jobs)):
     # get_job_details = elem.until(
     #     expected_conditions.element_to_be_clickable((By.XPATH, job_click_path))).click()
 
-    jd_path = ' //div[contains(@class, "description__text--rich")]'
-    jd0 = None
-    try:
-        jd0 = job.find_element(By.XPATH, jd_path).get_attribute('innerText')
-        # print(jd0)
-    except NoSuchElementException:
-        pass
-
     # jd_path = ' //div[contains(@class, "description__text--rich")]'
-    # jd0 = elem.until(expected_conditions.presence_of_element_located((By.XPATH, jd_path))).get_attribute('innerText')
+    # jd0 = None
+    # try:
+    #     jd0 = job.find_element(By.XPATH, jd_path).get_attribute('innerText')
+    # except NoSuchElementException:
+    #     pass
     # jd.append(jd0)
+
+    # test_path = ' //h2[contains(@class, "top-card-layout__title")]'
+    # test = job.find_element(By.XPATH, test_path)
+    # print(test.text)
+    # print(job_title[item])
+
+    a_path = ' //h2[contains(@class, "top-card-layout__title")]'
+    a_check = elem.until(expected_conditions.text_to_be_present_in_element((By.XPATH, a_path), job_title[item]))
+
+    jd_path = ' //div[contains(@class, "description__text--rich")]'
+    jd0 = elem.until(expected_conditions.presence_of_element_located((By.XPATH, jd_path))).get_attribute('innerText')
+    jd.append(jd0)
 
     seniority_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[1] // span'
     seniority0 = None
     try:
         seniority0 = job.find_element(By.XPATH, seniority_path).get_attribute('innerText').strip()
-        # print(seniority0)
     except NoSuchElementException:
         pass
 
@@ -207,7 +222,6 @@ for item in range(len(jobs)):
     emp_type0 = None
     try:
         emp_type0 = job.find_element(By.XPATH, emp_type_path).get_attribute('innerText').strip()
-        # print(emp_type0)
     except NoSuchElementException:
         pass
 
@@ -219,7 +233,6 @@ for item in range(len(jobs)):
         job_func_elements = job.find_element(By.XPATH, job_func_path).get_attribute('innerText')
         job_func_elements_list = job_func_elements.replace('and ', ',').replace(', ,', ',').split(sep=',')
         job_func_elements_final = [s.strip() for s in job_func_elements_list]
-        # print(job_func_elements_final)
     except NoSuchElementException:
         pass
 
@@ -231,7 +244,6 @@ for item in range(len(jobs)):
         industries_elements = job.find_element(By.XPATH, industries_path).get_attribute('innerText')
         industries_elements_list = industries_elements.replace('and ', ',').replace(', ,', ',').split(sep=',')
         industries_elements_final = [s.strip() for s in industries_elements_list]
-        # print(industries_elements_final)
     except NoSuchElementException:
         pass
 
@@ -241,9 +253,9 @@ for item in range(len(jobs)):
     # get_url = wd.current_url
     # print("The current url is:" + str(get_url))
 
-    print(item + 1)
+    print(f'{item + 1} {jd0[:30]}..., {seniority0}, {emp_type0}, {job_func_elements_final}, {industries_elements_final}')
 
-print(len(job_id), len(date), len(company_name), len(job_title), len(location), len(jd), len(seniority), len(emp_type), len(job_func), len(industries), len(job_link) )
+# print(len(job_id), len(date), len(company_name), len(job_title), len(location), len(jd), len(seniority), len(emp_type), len(job_func), len(industries), len(job_link) )
 
 
 job_data = pd.DataFrame({
