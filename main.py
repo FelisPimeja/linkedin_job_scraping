@@ -117,7 +117,6 @@ for job in jobs:
         job_id0 = str(job.find_element(By.CSS_SELECTOR, '.base-card').get_attribute('data-entity-urn')).split(sep=':')[-1]
     except NoSuchElementException:
         pass
-    # print(job_id0)
     job_id.append(job_id0)
 
     job_title0 = None
@@ -125,7 +124,6 @@ for job in jobs:
         job_title0 = job.find_element(By.CSS_SELECTOR, '.base-search-card__info>h3').text
     except NoSuchElementException:
         pass
-    # print(job_title0)
     job_title.append(job_title0)
 
     company_name0 = None
@@ -133,7 +131,6 @@ for job in jobs:
         company_name0 = job.find_element(By.CSS_SELECTOR, '.base-search-card__info>h4').text
     except NoSuchElementException:
         pass
-    # print(company_name0)
     company_name.append(company_name0)
 
     location0 = None
@@ -141,7 +138,6 @@ for job in jobs:
         location0 = job.find_element(By.CSS_SELECTOR, '.job-search-card__location').text
     except NoSuchElementException:
         pass
-    # print(location0)
     location.append(location0)
 
     date0 = None
@@ -149,7 +145,6 @@ for job in jobs:
         date0 = job.find_element(By.CSS_SELECTOR, '[class*="job-search-card__listdate"]').get_attribute('datetime')
     except NoSuchElementException:
         pass
-    # print(date0)
     date.append(date0)
 
     job_link0 = None
@@ -157,11 +152,12 @@ for job in jobs:
         job_link0 = job.find_element(By.CSS_SELECTOR, 'a').get_attribute('href').split(sep='?')[0]
     except NoSuchElementException:
         pass
-    # print(job_link0)
     job_link.append(job_link0)
 
+    print(f'{str(job_id0)}, {job_title0}, {company_name0}, {location0}, {date0}, {job_link0}')
 
-print('Gathering details')
+
+print('Gathering more details...')
 
 jd =[]
 seniority =[]
