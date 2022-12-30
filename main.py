@@ -36,18 +36,28 @@ url = 'https://www.linkedin.com/jobs/search?keywords=fme&location=Netherlands'
 proxy = 'localhost:9051'
 service = Service(env_vars['chromedriver_path'])
 options = webdriver.ChromeOptions()
-# Без запуска окна браузера:
+
+# Load Chrome silently without popping up window
 # options.add_argument('--headless')
-# Чтобы LinkedIn не переводил отдельные элементы на русский:
+
+# Override system locale so that LinkedIn using English
 options.add_argument("--lang=en-GB")
-# Фиксируем разрешение окна, чтобы LinkedIn подгружал данные в том же окне, а не открывал новое:
+
+# Fix window size large enough that LinkedIn will load job info on the same page instead of loading new one:
 options.add_argument("window-size=1400,600")
-# Запуск через проки Тора:
+
+# Use proxy to load pages (in my case LinkedIn is blocked in Russia so I use Tor as local proxi):
 options.add_argument('--proxy-server=socks5://' + proxy)
-# Чтобы не мусорить в консоль:
+
+# Prevent from console spam:
 options.add_experimental_option('excludeSwitches', ['enable-logging'])
 
+# Make Chrome window stay after Python script finished working
 options.add_experimental_option("detach", True)
+
+# Disable loading images to speed up things a bit:
+prefs = {"profile.managed_default_content_settings.images": 2}
+options.add_experimental_option("prefs", prefs)
 
 
 wd = webdriver.Chrome(options=options, service=service)
@@ -56,11 +66,17 @@ ignored_exceptions = (NoSuchElementException, StaleElementReferenceException, Ti
 elem = WebDriverWait(wd, timeout=5, ignored_exceptions=ignored_exceptions)
 
 # Close cookies and 'sign in' messages for easier debugging
-accept_cookies_button = elem.until(
-    expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, 'button.artdeco-global-alert-action'))).click()
+try:
+    accept_cookies_button = elem.until(
+        expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, 'button.artdeco-global-alert-action'))).click()
+except:
+    pass
 
-close_signin_button = elem.until(
-    expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, 'button.cta-modal__dismiss-btn'))).click()
+try:
+    close_signin_button = elem.until(
+        expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, 'button.cta-modal__dismiss-btn'))).click()
+except:
+    pass
 
 # Get number of Job positions to parse
 no_of_jobs_str = elem.until(
@@ -83,7 +99,7 @@ while i <= int(no_of_jobs/25) + 1:
 
 job_lists = wd.find_element(By.CSS_SELECTOR, '.jobs-search__results-list')
 
-jobs = job_lists.find_elements(By.CSS_SELECTOR, 'li') # return a list
+jobs = job_lists.find_elements(By.CSS_SELECTOR, 'li')  # return a list
 
 # print('jobs' + jobs[0].text)
 print(str(len(jobs)) + ' Processing base info...')
@@ -154,17 +170,20 @@ job_func =[]
 industries =[]
 for item in range(len(jobs)):
     job_func0 = []
-
     industries0 = []
-    # clicking job to view job details
-    job_click_path = f' // ul[contains(@class, "jobs-search__results-list")] / li[{item + 1}] // *'
 
+    job_click_path = f' // ul[contains(@class, "jobs-search__results-list")] / li[{item + 1}] // *'
     try:
         job.find_element(By.XPATH, job_click_path).click()
         # print(job_click.text)
         time.sleep(2)
     except:
         print('Something went wrong (can not click job title to get job details)')
+
+    # clicking job to view job details
+    # job_click_path = f' // ul[contains(@class, "jobs-search__results-list")] / li[{item + 1}] // *'
+    # get_job_details = elem.until(
+    #     expected_conditions.element_to_be_clickable((By.XPATH, job_click_path))).click()
 
     jd_path = ' //div[contains(@class, "description__text--rich")]'
     jd0 = None
@@ -173,7 +192,10 @@ for item in range(len(jobs)):
         # print(jd0)
     except NoSuchElementException:
         pass
-    jd.append(jd0)
+
+    # jd_path = ' //div[contains(@class, "description__text--rich")]'
+    # jd0 = elem.until(expected_conditions.presence_of_element_located((By.XPATH, jd_path))).get_attribute('innerText')
+    # jd.append(jd0)
 
     seniority_path = ' // ul[contains(@class, "description__job-criteria-list")] / li[1] // span'
     seniority0 = None
@@ -219,13 +241,13 @@ for item in range(len(jobs)):
 
     industries.append(industries_elements_final)
 
-    # Проверяем текущую страницу:
+    # Check current page address:
     # get_url = wd.current_url
     # print("The current url is:" + str(get_url))
 
     print(item + 1)
 
-# print(len(job_id), len(date), len(company_name), len(job_title), len(location), len(jd), len(seniority), len(emp_type), len(job_func), len(industries), len(job_link) )
+print(len(job_id), len(date), len(company_name), len(job_title), len(location), len(jd), len(seniority), len(emp_type), len(job_func), len(industries), len(job_link) )
 
 
 job_data = pd.DataFrame({
