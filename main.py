@@ -1,9 +1,14 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import StaleElementReferenceException
+from selenium.webdriver.support import expected_conditions
+from selenium.webdriver.support.wait import WebDriverWait
 import pandas as pd
 # import click
 import time
+
 from sqlalchemy import create_engine
 from sqlalchemy import types
 
@@ -19,16 +24,19 @@ with open('./.env') as f:
 # url = "https://www.google.com"
 
 # GIS in Netherlands:
-url = 'https://www.linkedin.com/jobs/search/?keywords=gis%20OR%20geo&location=Netherlands'
+# url = 'https://www.linkedin.com/jobs/search/?keywords=gis%20OR%20geo&location=Netherlands'
 # Postgis in Netherlands:
 # url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Netherlands'
+# Postgis in Belgium:
+# url = 'https://www.linkedin.com/jobs/search?keywords=postgis&location=Belgium'
 # fme in Netherlands:
-# url = 'https://www.linkedin.com/jobs/search?keywords=fme&location=Netherlands'
+url = 'https://www.linkedin.com/jobs/search?keywords=fme&location=Netherlands'
 
 proxy = 'localhost:9051'
+service = Service(env_vars['chromedriver_path'])
 options = webdriver.ChromeOptions()
 # Без запуска окна браузера:
-options.add_argument('--headless')
+# options.add_argument('--headless')
 # Чтобы LinkedIn не переводил отдельные элементы на русский:
 options.add_argument("--lang=en-GB")
 # Фиксируем разрешение окна, чтобы LinkedIn подгружал данные в том же окне, а не открывал новое:
@@ -41,8 +49,15 @@ options.add_experimental_option('excludeSwitches', ['enable-logging'])
 options.add_experimental_option("detach", True)
 
 
-wd = webdriver.Chrome(options=options)
+wd = webdriver.Chrome(options=options, service=service)
 wd.get(url)
+ignored_exceptions = (NoSuchElementException, StaleElementReferenceException)
+
+# Close cookies warning for easier debugging
+cookies_button_path = 'button.artdeco-global-alert-action'
+accept_cookies_button = WebDriverWait(wd, timeout=10, ignored_exceptions=ignored_exceptions) \
+    .until(expected_conditions.element_to_be_clickable((By.CSS_SELECTOR, cookies_button_path)))
+accept_cookies_button.click()
 
 no_of_jobs = None
 try:
@@ -60,17 +75,17 @@ while i <= int(no_of_jobs/25) + 1:
     i = i + 1
     try:
         wd.find_element(By.XPATH, '/html/body/main/div/section/button').click()
-        time.sleep(2)
+        time.sleep(5)
     except:
         pass
-        time.sleep(2)
+        time.sleep(5)
 
 job_lists = wd.find_element(By.CSS_SELECTOR, '.jobs-search__results-list')
 
 jobs = job_lists.find_elements(By.CSS_SELECTOR, 'li') # return a list
 
 # print('jobs' + jobs[0].text)
-print(str(len(jobs)) + ' jobs found \nProcessing base info:')
+print(str(len(jobs)) + ' Processing base info...')
 
 
 job_id = []
@@ -146,9 +161,21 @@ for item in range(len(jobs)):
     try:
         job.find_element(By.XPATH, job_click_path).click()
         # print(job_click.text)
-        time.sleep(1)
+        time.sleep(2)
     except:
         print('Something went wrong (can not click job title to get job details)')
+
+    # my_element_id = 'something123'
+    # ignored_exceptions = (NoSuchElementException, StaleElementReferenceException)
+    # your_element = WebDriverWait(your_driver, some_timeout, ignored_exceptions=ignored_exceptions) \
+    #     .until(expected_conditions.presence_of_element_located((By.ID, my_element_id)))
+
+    # ignored_exceptions = (NoSuchElementException, StaleElementReferenceException)
+    # job_element = WebDriverWait(wd, timeout=1, ignored_exceptions=ignored_exceptions) \
+    #     .until(expected_conditions.presence_of_element_located((By.XPATH, job_click_path)))
+    # job_element.click()
+    # time.sleep(2)
+
 
     jd_path = ' //div[contains(@class, "description__text--rich")]'
     jd0 = None
@@ -227,8 +254,8 @@ job_data = pd.DataFrame({
 })
 
 # cleaning description column
-job_data['Description'] = job_data['Description'].str.replace('\n', ' ')
-job_data.to_excel('gis_jobs.xlsx', index=False)
+# job_data['Description'] = job_data['Description'].str.replace('\n', ' ')
+# job_data.to_excel('gis_jobs.xlsx', index=False)
 
 # Write data into Postgres
 connection = create_engine(f'postgresql://{env_vars["user"]}:{env_vars["password"]}@{env_vars["host"]}:'
@@ -249,9 +276,6 @@ job_data.to_sql('open_positions', con=connection, schema='linkedin', if_exists='
                   "link": types.Text()
               })
 
-# conn = psycopg2.connect(dbname='postgres', user='postgres',
-#                         password='gK7mRpyL', host='localhost')
-# cursor = conn.cursor()
 
 # print(emp_type)
 # print(seniority)
