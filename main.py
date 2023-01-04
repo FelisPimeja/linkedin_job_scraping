@@ -40,14 +40,13 @@ url_list = [f'{base_url}?keywords={word}&location={location}&start='
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-url = url_list[14]  # 21
+url = url_list[21]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
 
-# ref_job_list = []
-# ref_job_list = pd.read_sql_query('select * from linkedin.open_positions', con=connection) #.id.values.tolist()
-# print(ref_job_list.to_string())
+ref_job_list = list(pd.read_sql_query('select * from linkedin.open_positions', con=connection)['id'])
+# print(ref_job_list)
 
 job_list = []
 df = pd.DataFrame(columns=[
@@ -61,6 +60,7 @@ while start > -1:
     page = requests.get(url=url + str(start), proxies=proxies)
     soup = bs4.BeautifulSoup(page.text, 'html.parser')
     if soup.find('li') is None:
+        print('<li> elements not found')
         break
 
     start = start + 25
@@ -68,6 +68,11 @@ while start > -1:
 
     for idx, li in enumerate(lis):
         job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
+
+        if int(job_id) in ref_job_list:
+            print(f'  {idx} job_id: {job_id} found in db already. Skipping...')
+            continue
+
         date = li.select_one('time')['datetime']
         job_title = li.select_one('h3.base-search-card__title').get_text().strip()
         company_name = li.select_one('h4').get_text().strip()
