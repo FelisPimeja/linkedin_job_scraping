@@ -40,7 +40,7 @@ url_list = [f'{base_url}?keywords={word}&location={location}&start='
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-url = url_list[21]  # 21
+url = url_list[17]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
@@ -70,7 +70,7 @@ while start > -1:
         job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
 
         if int(job_id) in ref_job_list:
-            print(f'  {idx} job_id: {job_id} found in db already. Skipping...')
+            print(f'  {idx + 1} job_id: {job_id} found in db already. Skipping...')
             continue
 
         date = li.select_one('time')['datetime']
@@ -90,13 +90,16 @@ while start > -1:
         # print(f'{idx+1: 3d}', job_id, date, job_title[0:30], company_name[0:10], location, job_link, company_link)
 
         while True:
-            job_details = requests.get(url=job_link, proxies=proxies)
-            job_details = bs4.BeautifulSoup(job_details.text, 'html.parser')
-            if job_details.select_one('meta[name = "pageKey"]')['content'] == 'd_jobs_guest_details':
+            job_details_raw = requests.get(url=job_link, proxies=proxies)
+            job_details = bs4.BeautifulSoup(job_details_raw.text, 'html.parser')
+            if str(job_details_raw.status_code) == '200' and job_details.select_one(
+                    'meta[name = "pageKey"]')['content'] == 'd_jobs_guest_details':
                 break
+            else:
+                print('  Redirected to Auth page. Retrying...')
 
-        job_details = requests.get(url=job_link, proxies=proxies)
-        content = bs4.BeautifulSoup(job_details.text, 'html.parser').select_one('div.decorated-job-posting__details')
+
+        content = job_details.select_one('div.decorated-job-posting__details')
         description = content.select_one('div.description__text--rich').get_text('\n', strip=True)
         more_details = content.select('li.description__job-criteria-item')
         seniority = None
