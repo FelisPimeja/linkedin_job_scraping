@@ -1,16 +1,5 @@
-# from selenium import webdriver
-# from selenium.webdriver.common.by import By
-# from selenium.webdriver.chrome.service import Service
-# from selenium.common.exceptions import TimeoutException
-# from selenium.common.exceptions import NoSuchElementException
-# from selenium.common.exceptions import StaleElementReferenceException
-# from selenium.webdriver.support import expected_conditions
-# from selenium.webdriver.support.wait import WebDriverWait
-# # import click
-# import time
-
 import itertools
-import bs4, re, requests
+import bs4, requests
 import pandas as pd
 
 from sqlalchemy import create_engine
@@ -40,7 +29,7 @@ url_list = [f'{base_url}?keywords={word}&location={location}&start='
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-url = url_list[17]  # 21
+url = url_list[21:27]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
@@ -55,9 +44,11 @@ df = pd.DataFrame(columns=[
 start = 0
 
 while start > -1:
-    # print(url + str(start))
 
-    page = requests.get(url=url + str(start), proxies=proxies)
+    target_url = url + str(start)
+    print(target_url)
+
+    page = requests.get(url=target_url, proxies=proxies)
     soup = bs4.BeautifulSoup(page.text, 'html.parser')
     if soup.find('li') is None:
         print('<li> elements not found')
@@ -70,7 +61,7 @@ while start > -1:
         job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
 
         if int(job_id) in ref_job_list:
-            print(f'  {idx + 1} job_id: {job_id} found in db already. Skipping...')
+            print(f' {idx + 1} job_id: {job_id} found in db already. Skipping...')
             continue
 
         date = li.select_one('time')['datetime']
@@ -96,8 +87,7 @@ while start > -1:
                     'meta[name = "pageKey"]')['content'] == 'd_jobs_guest_details':
                 break
             else:
-                print('  Redirected to Auth page. Retrying...')
-
+                print(' Redirected to Auth page. Retrying...')
 
         content = job_details.select_one('div.decorated-job-posting__details')
         description = content.select_one('div.description__text--rich').get_text('\n', strip=True)
