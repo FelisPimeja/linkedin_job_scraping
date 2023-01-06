@@ -26,6 +26,8 @@ localions = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Germany',
 url_list = [f'{base_url}?keywords={word}&location={location}&start='
             for word, location in itertools.product(key_words, localions)]
 
+title_stop_words = ['Traineeship', 'Internship', 'Intern', 'Junior']
+
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
@@ -62,13 +64,16 @@ for url in urls:
 
         for idx, li in enumerate(lis):
             job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
-
             if int(job_id) in ref_job_list:
                 print(f' {idx + 1} job_id: {job_id} found in db already. Skipping...')
                 continue
 
             date = li.select_one('time')['datetime']
             job_title = li.select_one('h3.base-search-card__title').get_text().strip()
+            if any(word in str(job_title) for word in title_stop_words):
+                print(f' {idx + 1} job_id: {job_id} {job_title} filtered because of stop words. Skipping...')
+                continue
+
             company_name = li.select_one('h4').get_text().strip()
             if li.select_one('a.hidden-nested-link'):
                 company_link = li.select_one('a.hidden-nested-link')['href'].split(sep='?')[0]
