@@ -29,30 +29,32 @@ url_list = [f'{base_url}?keywords={word}&location={location}&start='
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-urls = url_list[21:27]  # 21
+urls = url_list[28:34]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
 
-ref_job_list = list(pd.read_sql_query('select * from linkedin.open_positions', con=connection)['id'])
-# print(ref_job_list)
-
-job_list = []
-df = pd.DataFrame(columns=[
-    'id', 'date', 'title', 'company', 'company_link', 'location', 'link',
-    'description', 'seniority', 'employment_type', 'job_function', 'industries'])
-start = 0
 
 for url in urls:
+
+    start = 0
     while start > -1:
 
         target_url = url + str(start)
-        print(target_url)
+        print( f' Parsing page: {target_url}')
+
+        job_list = []
+        df = pd.DataFrame(columns=[
+            'id', 'date', 'title', 'company', 'company_link', 'location', 'link',
+            'description', 'seniority', 'employment_type', 'job_function', 'industries'])
+
+        ref_job_list = list(pd.read_sql_query('select * from linkedin.open_positions', con=connection)['id'])
+        # print(ref_job_list)
 
         page = requests.get(url=target_url, proxies=proxies)
         soup = bs4.BeautifulSoup(page.text, 'html.parser')
         if soup.find('li') is None:
-            print('<li> elements not found')
+            print('No elements found. Skipping to next url...')
             break
 
         start = start + 25
@@ -118,22 +120,23 @@ for url in urls:
                   description, seniority, employment_type, job_function, industries]], columns=df.columns
             ), df], ignore_index=True)
 
-print(df.to_string())
+        print(df.to_string())
 
-# Write data into Postgres
-df = df.set_index('id')
-df.to_sql('open_positions', con=connection, schema='linkedin', if_exists='append',
-          dtype={
-              "id": types.BigInteger(),
-              "date": types.Date(),
-              "title": types.Text(),
-              "company_name": types.Text(),
-              "company_link": types.Text(),
-              "location": types.Text(),
-              "job_link": types.Text(),
-              "description": types.Text(),
-              "seniority": types.Text(),
-              "employment_type": types.Text(),
-              "job_function": types.Text(),
-              "industries": types.Text()
-          })
+        # Write data into Postgres
+        df = df.set_index('id')
+        df.to_sql('open_positions', con=connection, schema='linkedin', if_exists='append',
+                  dtype={
+                      "id": types.BigInteger(),
+                      "date": types.Date(),
+                      "title": types.Text(),
+                      "company_name": types.Text(),
+                      "company_link": types.Text(),
+                      "location": types.Text(),
+                      "job_link": types.Text(),
+                      "description": types.Text(),
+                      "seniority": types.Text(),
+                      "employment_type": types.Text(),
+                      "job_function": types.Text(),
+                      "industries": types.Text()
+                  })
+
