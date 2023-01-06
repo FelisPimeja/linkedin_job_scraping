@@ -29,7 +29,7 @@ url_list = [f'{base_url}?keywords={word}&location={location}&start='
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-url = url_list[21:27]  # 21
+urls = url_list[21:27]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
@@ -43,79 +43,80 @@ df = pd.DataFrame(columns=[
     'description', 'seniority', 'employment_type', 'job_function', 'industries'])
 start = 0
 
-while start > -1:
+for url in urls:
+    while start > -1:
 
-    target_url = url + str(start)
-    print(target_url)
+        target_url = url + str(start)
+        print(target_url)
 
-    page = requests.get(url=target_url, proxies=proxies)
-    soup = bs4.BeautifulSoup(page.text, 'html.parser')
-    if soup.find('li') is None:
-        print('<li> elements not found')
-        break
+        page = requests.get(url=target_url, proxies=proxies)
+        soup = bs4.BeautifulSoup(page.text, 'html.parser')
+        if soup.find('li') is None:
+            print('<li> elements not found')
+            break
 
-    start = start + 25
-    lis = soup.find_all('li')
+        start = start + 25
+        lis = soup.find_all('li')
 
-    for idx, li in enumerate(lis):
-        job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
+        for idx, li in enumerate(lis):
+            job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
 
-        if int(job_id) in ref_job_list:
-            print(f' {idx + 1} job_id: {job_id} found in db already. Skipping...')
-            continue
+            if int(job_id) in ref_job_list:
+                print(f' {idx + 1} job_id: {job_id} found in db already. Skipping...')
+                continue
 
-        date = li.select_one('time')['datetime']
-        job_title = li.select_one('h3.base-search-card__title').get_text().strip()
-        company_name = li.select_one('h4').get_text().strip()
-        if li.select_one('a.hidden-nested-link'):
-            company_link = li.select_one('a.hidden-nested-link')['href'].split(sep='?')[0]
-        else:
-            company_link = None
-        company_link = company_link
-        location = li.select_one('.job-search-card__location').get_text().strip()
-        if li.select_one('a.base-card__full-link'):
-            job_link = li.select_one('a.base-card__full-link')['href']
-        else:
-            job_link = li.select_one('a.base-search-card--link')['href']
-        job_link = job_link.split(sep='?')[0].replace('nl.linkedin.com', 'linkedin.com')
-        # print(f'{idx+1: 3d}', job_id, date, job_title[0:30], company_name[0:10], location, job_link, company_link)
-
-        while True:
-            job_details_raw = requests.get(url=job_link, proxies=proxies)
-            job_details = bs4.BeautifulSoup(job_details_raw.text, 'html.parser')
-            if str(job_details_raw.status_code) == '200' and job_details.select_one(
-                    'meta[name = "pageKey"]')['content'] == 'd_jobs_guest_details':
-                break
+            date = li.select_one('time')['datetime']
+            job_title = li.select_one('h3.base-search-card__title').get_text().strip()
+            company_name = li.select_one('h4').get_text().strip()
+            if li.select_one('a.hidden-nested-link'):
+                company_link = li.select_one('a.hidden-nested-link')['href'].split(sep='?')[0]
             else:
-                print(' Redirected to Auth page. Retrying...')
+                company_link = None
+            company_link = company_link
+            location = li.select_one('.job-search-card__location').get_text().strip()
+            if li.select_one('a.base-card__full-link'):
+                job_link = li.select_one('a.base-card__full-link')['href']
+            else:
+                job_link = li.select_one('a.base-search-card--link')['href']
+            job_link = job_link.split(sep='?')[0].replace('nl.linkedin.com', 'linkedin.com')
+            # print(f'{idx+1: 3d}', job_id, date, job_title[0:30], company_name[0:10], location, job_link, company_link)
 
-        content = job_details.select_one('div.decorated-job-posting__details')
-        description = content.select_one('div.description__text--rich').get_text('\n', strip=True)
-        more_details = content.select('li.description__job-criteria-item')
-        seniority = None
-        employment_type = None
-        job_function = None
-        industries = None
-        for detail in more_details:
-            detail_type = detail.select_one('h3').get_text().strip()
-            detail_detail = detail.select_one('span').get_text().strip()
-            if detail_type == 'Seniority level':
-                seniority = detail_detail
-            elif detail_type == 'Employment type':
-                employment_type = detail_detail
-            elif detail_type == 'Job function':
-                job_function = detail_detail.replace('and', '').replace(', ,', ',').split(sep=', ')
-            elif detail_type == 'Industries':
-                industries = detail_detail.replace('and', '').replace(', ,', ',').split(sep=', ')
+            while True:
+                job_details_raw = requests.get(url=job_link, proxies=proxies)
+                job_details = bs4.BeautifulSoup(job_details_raw.text, 'html.parser')
+                if str(job_details_raw.status_code) == '200' and job_details.select_one(
+                        'meta[name = "pageKey"]')['content'] == 'd_jobs_guest_details':
+                    break
+                else:
+                    print(' Redirected to Auth page. Retrying...')
 
-        info_string = (job_id, date, job_title, company_name, location, job_link, company_link,
-                       description, seniority, employment_type, job_function, industries)
-        print(f'{idx + 1: 3d}', info_string)
-        job_list.append(info_string)
-        df = pd.concat([pd.DataFrame(
-            [[job_id, date, job_title, company_name, company_link, location, job_link,
-              description, seniority, employment_type, job_function, industries]], columns=df.columns
-        ), df], ignore_index=True)
+            content = job_details.select_one('div.decorated-job-posting__details')
+            description = content.select_one('div.description__text--rich').get_text('\n', strip=True)
+            more_details = content.select('li.description__job-criteria-item')
+            seniority = None
+            employment_type = None
+            job_function = None
+            industries = None
+            for detail in more_details:
+                detail_type = detail.select_one('h3').get_text().strip()
+                detail_detail = detail.select_one('span').get_text().strip()
+                if detail_type == 'Seniority level':
+                    seniority = detail_detail
+                elif detail_type == 'Employment type':
+                    employment_type = detail_detail
+                elif detail_type == 'Job function':
+                    job_function = detail_detail.replace('and', '').replace(', ,', ',').split(sep=', ')
+                elif detail_type == 'Industries':
+                    industries = detail_detail.replace('and', '').replace(', ,', ',').split(sep=', ')
+
+            info_string = (job_id, date, job_title, company_name, location, job_link, company_link,
+                           description, seniority, employment_type, job_function, industries)
+            print(f'{idx + 1: 3d}', info_string)
+            job_list.append(info_string)
+            df = pd.concat([pd.DataFrame(
+                [[job_id, date, job_title, company_name, company_link, location, job_link,
+                  description, seniority, employment_type, job_function, industries]], columns=df.columns
+            ), df], ignore_index=True)
 
 print(df.to_string())
 
