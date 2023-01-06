@@ -21,17 +21,17 @@ connection = create_engine(f'postgresql://{env_vars["user"]}:{env_vars["password
 #  Generate target urls:
 base_url = 'https://www.linkedin.com/jobs/api/seeMoreJobPostings/search'
 key_words = ['gis', 'geo', 'postgis', 'fme', 'qgis', 'arcgis', 'geospatial']
-localions = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Germany', 'Ireland']
+locations = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Germany', 'Ireland']
 
 url_list = [f'{base_url}?keywords={word}&location={location}&start='
-            for word, location in itertools.product(key_words, localions)]
+            for word, location in itertools.product(key_words, locations)]
 
 title_stop_words = ['Traineeship', 'Internship', 'Intern', 'Junior']
 
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-urls = url_list[28:34]  # 21
+urls = url_list[35:41]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
@@ -125,7 +125,7 @@ for url in urls:
                   description, seniority, employment_type, job_function, industries]], columns=df.columns
             ), df], ignore_index=True)
 
-        print(df.to_string())
+        # print(df.to_string())
 
         # Write data into Postgres
         df = df.set_index('id')
