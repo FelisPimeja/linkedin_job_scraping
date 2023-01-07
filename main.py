@@ -1,5 +1,7 @@
 import itertools
-import bs4, requests
+import re
+import bs4
+import requests
 import pandas as pd
 
 from sqlalchemy import create_engine
@@ -26,12 +28,12 @@ locations = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Germany',
 url_list = [f'{base_url}?keywords={word}&location={location}&start='
             for word, location in itertools.product(key_words, locations)]
 
-title_stop_words = ['Traineeship', 'Internship', 'Intern', 'Junior', 'Docent']
+title_stop_words = ['traineeship', 'internship', 'intern', 'junior', 'trainee', 'docent', 'c\+\+', 'java', 'devops', 'developer']
 
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-urls = url_list[35:41]  # 21
+urls = url_list[7:13]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
@@ -70,7 +72,8 @@ for url in urls:
 
             date = li.select_one('time')['datetime']
             job_title = li.select_one('h3.base-search-card__title').get_text().strip()
-            if any(word in str(job_title) for word in title_stop_words):
+            stop_words_regexp = '|'.join(title_stop_words)
+            if re.search(stop_words_regexp, job_title, re.I):
                 print(f' {idx + 1} job_id: {job_id} {job_title} filtered because of stop words. Skipping...')
                 continue
 
