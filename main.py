@@ -26,7 +26,7 @@ locations = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Germany',
 url_list = [f'{base_url}?keywords={word}&location={location}&start='
             for word, location in itertools.product(key_words, locations)]
 
-title_stop_words = ['Traineeship', 'Internship', 'Intern', 'Junior']
+title_stop_words = ['Traineeship', 'Internship', 'Intern', 'Junior', 'Docent']
 
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
