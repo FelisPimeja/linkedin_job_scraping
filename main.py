@@ -22,7 +22,7 @@ connection = create_engine(f'postgresql://{env_vars["user"]}:{env_vars["password
 
 #  Generate target urls:
 base_url = 'https://www.linkedin.com/jobs/api/seeMoreJobPostings/search'
-key_words = ['Database Engineer', 'Data Engineer', 'gis', 'geo', 'postgis', 'fme', 'qgis', 'arcgis', 'geospatial']
+key_words = ['Database%20Engineer', 'Data%20Engineer', 'gis', 'geo', 'postgis', 'fme', 'qgis', 'arcgis', 'geospatial']
 locations = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Ireland']
 
 url_list = [f'{base_url}?keywords={word}&location={location}&start='
@@ -35,7 +35,7 @@ title_stop_str3 = '[a-zA-Z0-9]'
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-urls = url_list[0:5]  # 21
+urls = url_list[6:10]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
@@ -43,11 +43,12 @@ proxies = {"http": proxy, "https": proxy, "ftp": proxy}
 
 for url in urls:
 
+    fid = 0
     start = 0
     while start > -1:
 
         target_url = url + str(start)
-        print( f' Parsing page: {target_url}')
+        print( f'     Parsing page: {target_url}')
 
         job_list = []
         df = pd.DataFrame(columns=[
@@ -55,28 +56,28 @@ for url in urls:
             'description', 'seniority', 'employment_type', 'job_function', 'industries'])
 
         ref_job_list = list(pd.read_sql_query('select * from linkedin.open_positions', con=connection)['id'])
-        # print(ref_job_list)
 
         while True:
             page = requests.get(url=target_url, proxies=proxies)
             if str(page.status_code) == '200':
                 break
             else:
-                print(' Redirected to Auth page. Retrying...')
+                print('     Redirected to Auth page. Retrying...')
         soup = bs4.BeautifulSoup(page.text, 'html.parser')
         if soup.find('li') is None:
-            print('Empty page. Skipping...')
             print(page.status_code)
             print(soup)
+            print('     Empty page. Skipping...')
             break
 
         start = start + 25
         lis = soup.find_all('li')
 
-        for idx, li in enumerate(lis):
+        for li in lis:
+            fid = fid + 1
             job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
             if int(job_id) in ref_job_list:
-                print(f' {idx + 1} job_id: {job_id} already in db. Skipping...')
+                print(f'{fid: 4d} job_id: {job_id} already in db. Skipping...')
                 continue
 
             date = li.select_one('time')['datetime']
@@ -89,7 +90,7 @@ for url in urls:
             ):
                 job_title = job_title_str
             else:
-                print(f' {idx + 1} job_id: {job_id} {job_title_str} filtered because of stop words. Skipping...')
+                print(f'{fid: 4d} job_id: {job_id} {job_title_str} filtered because of stop words. Skipping...')
                 continue
 
             company_name = li.select_one('h4').get_text().strip()
@@ -104,7 +105,6 @@ for url in urls:
             else:
                 job_link = li.select_one('a.base-search-card--link')['href']
             job_link = job_link.split(sep='?')[0].replace('nl.linkedin.com', 'linkedin.com')
-            # print(f'{idx+1: 3d}', job_id, date, job_title[0:30], company_name[0:10], location, job_link, company_link)
 
             while True:
                 job_details_raw = requests.get(url=job_link, proxies=proxies)
@@ -113,7 +113,7 @@ for url in urls:
                         'meta[name = "pageKey"]')['content'] == 'd_jobs_guest_details':
                     break
                 else:
-                    print(' Redirected to Auth page. Retrying...')
+                    print('     Redirected to Auth page. Retrying...')
 
             content = job_details.select_one('div.decorated-job-posting__details')
             description = content.select_one('div.description__text--rich').get_text('\n', strip=True)
@@ -136,14 +136,12 @@ for url in urls:
 
             info_string = (job_id, date, job_title, company_name, location, job_link, company_link,
                            description, seniority, employment_type, job_function, industries)
-            print(f'{idx + 1: 3d}', info_string)
+            print(f'{fid: 4d}', info_string)
             job_list.append(info_string)
             df = pd.concat([pd.DataFrame(
                 [[job_id, date, job_title, company_name, company_link, location, job_link,
                   description, seniority, employment_type, job_function, industries]], columns=df.columns
             ), df], ignore_index=True)
-
-        # print(df.to_string())
 
         # Write data into Postgres
         df = df.set_index('id')
