@@ -40,6 +40,12 @@ urls = url_list[6:10]  # 21
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
 
+logfile_name = 'logfile.log'
+def printLog(*args, **kwargs):
+    print(*args, **kwargs)
+    with open(logfile_name,'a') as file:
+        print(*args, **kwargs, file=file)
+
 
 for url in urls:
 
@@ -48,7 +54,7 @@ for url in urls:
     while start > -1:
 
         target_url = url + str(start)
-        print( f'     Parsing page: {target_url}')
+        printLog( f'     Parsing page: {target_url}')
 
         job_list = []
         df = pd.DataFrame(columns=[
@@ -62,12 +68,12 @@ for url in urls:
             if str(page.status_code) == '200':
                 break
             else:
-                print('     Redirected to Auth page. Retrying...')
+                printLog('     Redirected to Auth page. Retrying...')
         soup = bs4.BeautifulSoup(page.text, 'html.parser')
         if soup.find('li') is None:
-            print(page.status_code)
-            print(soup)
-            print('     Empty page. Skipping...')
+            printLog(page.status_code)
+            printLog(soup)
+            printLog('     Empty page. Skipping...')
             break
 
         start = start + 25
@@ -77,7 +83,7 @@ for url in urls:
             fid = fid + 1
             job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
             if int(job_id) in ref_job_list:
-                print(f'{fid: 4d} job_id: {job_id} already in db. Skipping...')
+                printLog(f'{fid: 4d} job_id: {job_id} already in db. Skipping...')
                 continue
 
             date = li.select_one('time')['datetime']
@@ -90,7 +96,7 @@ for url in urls:
             ):
                 job_title = job_title_str
             else:
-                print(f'{fid: 4d} job_id: {job_id} {job_title_str} filtered because of stop words. Skipping...')
+                printLog(f'{fid: 4d} job_id: {job_id} {job_title_str} filtered because of stop words. Skipping...')
                 continue
 
             company_name = li.select_one('h4').get_text().strip()
@@ -113,7 +119,7 @@ for url in urls:
                         'meta[name = "pageKey"]')['content'] == 'd_jobs_guest_details':
                     break
                 else:
-                    print('     Redirected to Auth page. Retrying...')
+                    printLog('     Redirected to Auth page. Retrying...')
 
             content = job_details.select_one('div.decorated-job-posting__details')
             description = content.select_one('div.description__text--rich').get_text('\n', strip=True)
@@ -136,7 +142,7 @@ for url in urls:
 
             info_string = (job_id, date, job_title, company_name, location, job_link, company_link,
                            description, seniority, employment_type, job_function, industries)
-            print(f'{fid: 4d}', info_string)
+            printLog(f'{fid: 4d}', info_string)
             job_list.append(info_string)
             df = pd.concat([pd.DataFrame(
                 [[job_id, date, job_title, company_name, company_link, location, job_link,
