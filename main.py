@@ -22,8 +22,8 @@ connection = create_engine(f'postgresql://{env_vars["user"]}:{env_vars["password
 
 #  Generate target urls:
 base_url = 'https://www.linkedin.com/jobs/api/seeMoreJobPostings/search'
-key_words = ['gis', 'geo', 'postgis', 'fme', 'qgis', 'arcgis', 'geospatial']
-locations = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Germany', 'Ireland']
+key_words = ['Database Engineer', 'Data Engineer', 'gis', 'geo', 'postgis', 'fme', 'qgis', 'arcgis', 'geospatial']
+locations = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Ireland']
 
 url_list = [f'{base_url}?keywords={word}&location={location}&start='
             for word, location in itertools.product(key_words, locations)]
@@ -35,7 +35,7 @@ title_stop_str3 = '[a-zA-Z0-9]'
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-urls = url_list[7:13]  # 21
+urls = url_list[0:5]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
@@ -57,10 +57,17 @@ for url in urls:
         ref_job_list = list(pd.read_sql_query('select * from linkedin.open_positions', con=connection)['id'])
         # print(ref_job_list)
 
-        page = requests.get(url=target_url, proxies=proxies)
+        while True:
+            page = requests.get(url=target_url, proxies=proxies)
+            if str(page.status_code) == '200':
+                break
+            else:
+                print(' Redirected to Auth page. Retrying...')
         soup = bs4.BeautifulSoup(page.text, 'html.parser')
         if soup.find('li') is None:
             print('Empty page. Skipping...')
+            print(page.status_code)
+            print(soup)
             break
 
         start = start + 25
@@ -139,20 +146,20 @@ for url in urls:
         # print(df.to_string())
 
         # Write data into Postgres
-        # df = df.set_index('id')
-        # df.to_sql('open_positions', con=connection, schema='linkedin', if_exists='append',
-        #           dtype={
-        #               "id": types.BigInteger(),
-        #               "date": types.Date(),
-        #               "title": types.Text(),
-        #               "company_name": types.Text(),
-        #               "company_link": types.Text(),
-        #               "location": types.Text(),
-        #               "job_link": types.Text(),
-        #               "description": types.Text(),
-        #               "seniority": types.Text(),
-        #               "employment_type": types.Text(),
-        #               "job_function": types.Text(),
-        #               "industries": types.Text()
-        #           })
+        df = df.set_index('id')
+        df.to_sql('open_positions', con=connection, schema='linkedin', if_exists='append',
+                  dtype={
+                      "id": types.BigInteger(),
+                      "date": types.Date(),
+                      "title": types.Text(),
+                      "company_name": types.Text(),
+                      "company_link": types.Text(),
+                      "location": types.Text(),
+                      "job_link": types.Text(),
+                      "description": types.Text(),
+                      "seniority": types.Text(),
+                      "employment_type": types.Text(),
+                      "job_function": types.Text(),
+                      "industries": types.Text()
+                  })
 
