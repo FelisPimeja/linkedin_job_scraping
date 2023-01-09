@@ -28,9 +28,9 @@ locations = ['Netherlands', 'Belgium', 'Norway', 'Sweden', 'Denmark', 'Germany',
 url_list = [f'{base_url}?keywords={word}&location={location}&start='
             for word, location in itertools.product(key_words, locations)]
 
-title_stop_words = ['traineeship', 'internship', ' intern ', 'junior', 'trainee', 'docent', 'c\+\+', 'java', 'devops',
-                    'developer', '\.net', 'c#', 'sales', 'postdoc', 'qa', 'doktorand', 'praktikant', 'phd', 'director',
-                    'tester', 'Full[\s-]?Stack', 'php']
+title_stop_str1 = 'å|ä|ü|ö|ø|é|koordinator|projekt|assistenz|landmeter|tiker|techniker|german\b|analist|techniek|\Biker\b|Merchandiserentwickler|konsulent|udvikler|leider|\ben\b|\btill\b|\Bteur\b|daten|beheer|landschap|ontwerper|ontwikkelaar|ondersteuner|transporten|rojekten|technische|industrie|planarkitekt|werker|geoteknikker|systemansvarlig|samordnare|analytiker|werkvoor|tekenaar|besiktningstekniker|\bopus\b|bilprovning|\bund\b|\ben\b|transportplanner|planoloog|stedenbouwkundige|erfaren|adviseur|\boch\b|deutsche|geotekniker|breitband|werkstudent|\bog\b|bergen|dokumentation|\bdie\b|fachkraft|\binom\b|\bals\b|bereich|\bvan\b|vermessungstechniker|netzdokumentation|\bmit\b|\bstrom\b|stavanger|geomatiker|netzplaner|trondheim|fachbereich|\boder\b|stadterlebnisse|upplands|ecoloog|\bder\b|ingenieur|bij|softwareentwickler|zeichner|schwerpunkt|\bmet\b|bauzeichner|praktikum|fagarbeider|adviseur|entwicklung|\bals\b|technischer|konsult|spezialist|vermessungstechniker|informatiespecialist|informatie|stadterlebnisse|telekommunikation|landskapsarkitekt|ict'
+title_stop_str2 = 'traineeship|internship|intern|junior|\bjr\b|trainee|docent|phd|postdoc|doktorand|praktikant|archeoloog|resource\splanner|merchandiser|staff|geotechnical|\bhr\b|Dokument|lawyer|backend|frontend|r&d|part\-time|software engineer|director|hydr[oa]|\bux\b|test|full[\s-]?stack|devops|developer|teacher|sales|\bqa\b|geophysicist|geologist|meteorologist|bosbouwer|hydroloog|c\+\+|c#|\.net|php|java|\bruby\b'
+title_stop_str3 = '[a-zA-Z0-9]'
 
 # https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
@@ -60,7 +60,7 @@ for url in urls:
         page = requests.get(url=target_url, proxies=proxies)
         soup = bs4.BeautifulSoup(page.text, 'html.parser')
         if soup.find('li') is None:
-            print('No elements found. Skipping to next url...')
+            print('Empty page. Skipping...')
             break
 
         start = start + 25
@@ -69,14 +69,20 @@ for url in urls:
         for idx, li in enumerate(lis):
             job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
             if int(job_id) in ref_job_list:
-                print(f' {idx + 1} job_id: {job_id} found in db already. Skipping...')
+                print(f' {idx + 1} job_id: {job_id} already in db. Skipping...')
                 continue
 
             date = li.select_one('time')['datetime']
-            job_title = li.select_one('h3.base-search-card__title').get_text().strip()
-            stop_words_regexp = '|'.join(title_stop_words)
-            if re.search(stop_words_regexp, job_title, re.I):
-                print(f' {idx + 1} job_id: {job_id} {job_title} filtered because of stop words. Skipping...')
+            job_title_str = li.select_one('h3.base-search-card__title').get_text().strip()
+            job_title = None
+            if (
+                    not re.search(title_stop_str1, job_title_str, re.I) and
+                    not re.search(title_stop_str2, job_title_str, re.I) and
+                    re.search(title_stop_str3, job_title_str, re.I)
+            ):
+                job_title = job_title_str
+            else:
+                print(f' {idx + 1} job_id: {job_id} {job_title_str} filtered because of stop words. Skipping...')
                 continue
 
             company_name = li.select_one('h4').get_text().strip()
@@ -133,20 +139,20 @@ for url in urls:
         # print(df.to_string())
 
         # Write data into Postgres
-        df = df.set_index('id')
-        df.to_sql('open_positions', con=connection, schema='linkedin', if_exists='append',
-                  dtype={
-                      "id": types.BigInteger(),
-                      "date": types.Date(),
-                      "title": types.Text(),
-                      "company_name": types.Text(),
-                      "company_link": types.Text(),
-                      "location": types.Text(),
-                      "job_link": types.Text(),
-                      "description": types.Text(),
-                      "seniority": types.Text(),
-                      "employment_type": types.Text(),
-                      "job_function": types.Text(),
-                      "industries": types.Text()
-                  })
+        # df = df.set_index('id')
+        # df.to_sql('open_positions', con=connection, schema='linkedin', if_exists='append',
+        #           dtype={
+        #               "id": types.BigInteger(),
+        #               "date": types.Date(),
+        #               "title": types.Text(),
+        #               "company_name": types.Text(),
+        #               "company_link": types.Text(),
+        #               "location": types.Text(),
+        #               "job_link": types.Text(),
+        #               "description": types.Text(),
+        #               "seniority": types.Text(),
+        #               "employment_type": types.Text(),
+        #               "job_function": types.Text(),
+        #               "industries": types.Text()
+        #           })
 
