@@ -84,4 +84,15 @@ where 	title !~* 'å|ä|ü|ö|ø|é|koordinator|projekt|assistenz|landmeter|tike
 	and title !~* 'traineeship|internship|intern|junior|\yjr\y|trainee|docent|phd|postdoc|doktorand|praktikant|archeoloog|resource\splanner|merchandiser|staff|geotechnical|\yhr\y|Dokument|lawyer|backend|frontend|r&d|part\-time|software engineer|director|hydr[oa]|\yux\y|test|full[\s-]?stack|devops|developer|teacher|sales|\yqa\y|geophysicist|geologist|meteorologist|bosbouwer|hydroloog|c\+\+|c#|\.net|php|java|\yruby\y'
 	and title ~* '[a-zA-Z0-9]'
 	
+	
+select 
+	manually_filltered_out,
+	title, 
+	company, 
+	substring(description from '.{1,100}[rR]eloc.{1,100}') reloc, 
+	description, 
+	location
+from linkedin.open_positions
+where description ~* 'relocat'
+	and not coalesce(manually_filltered_out, false)
 
