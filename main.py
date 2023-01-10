@@ -32,18 +32,19 @@ title_stop_str1 = 'å|ä|ü|ö|ø|é|koordinator|projekt|assistenz|landmeter|tik
 title_stop_str2 = 'traineeship|internship|intern|junior|\bjr\b|trainee|docent|phd|postdoc|doktorand|praktikant|archeoloog|resource\splanner|merchandiser|staff|geotechnical|\bhr\b|Dokument|lawyer|backend|frontend|r&d|part\-time|software engineer|director|hydr[oa]|\bux\b|test|full[\s-]?stack|devops|developer|teacher|sales|\bqa\b|geophysicist|geologist|meteorologist|bosbouwer|hydroloog|c\+\+|c#|\.net|php|java|\bruby\b'
 title_stop_str3 = '[a-zA-Z0-9]'
 
-# https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords=geo&location=Netherlands&start=600
 
 # for idx, url in enumerate(url_list): print(idx, url)
-urls = url_list[6:10]  # 21
+urls = url_list[11:15]  # 21
 
 proxy = 'socks5://localhost:9051'
 proxies = {"http": proxy, "https": proxy, "ftp": proxy}
 
 logfile_name = 'logfile.log'
-def printLog(*args, **kwargs):
+
+
+def print_log(*args, **kwargs):
     print(*args, **kwargs)
-    with open(logfile_name,'a') as file:
+    with open(logfile_name,'a', encoding="utf-8") as file:
         print(*args, **kwargs, file=file)
 
 
@@ -51,10 +52,10 @@ for url in urls:
 
     fid = 0
     start = 0
-    while start > -1:
+    while start < 1000:
 
         target_url = url + str(start)
-        printLog( f'      Parsing page: {target_url}')
+        print_log( f'      Parsing page: {target_url}')
 
         job_list = []
         df = pd.DataFrame(columns=[
@@ -68,12 +69,12 @@ for url in urls:
             if str(page.status_code) == '200':
                 break
             else:
-                printLog('      Redirected to Auth page. Retrying...')
+                print_log('      Redirected to Auth page. Retrying...')
         soup = bs4.BeautifulSoup(page.text, 'html.parser')
         if soup.find('li') is None:
-            printLog(page.status_code)
-            printLog(soup)
-            printLog('      Empty page. Skipping...')
+            print_log(page.status_code)
+            print_log(soup)
+            print_log('      Empty page. Skipping...')
             break
 
         start = start + 25
@@ -83,7 +84,7 @@ for url in urls:
             fid = fid + 1
             job_id = li.select_one('.base-search-card--link')['data-entity-urn'].split(sep=':')[-1]
             if int(job_id) in ref_job_list:
-                printLog(f'{fid: 5d} job_id: {job_id} already in db. Skipping...')
+                print_log(f'{fid: 5d} job_id: {job_id} already in db. Skipping...')
                 continue
 
             date = li.select_one('time')['datetime']
@@ -96,7 +97,7 @@ for url in urls:
             ):
                 job_title = job_title_str
             else:
-                printLog(f'{fid: 5d} job_id: {job_id} {job_title_str} filtered because of stop words. Skipping...')
+                print_log(f'{fid: 5d} job_id: {job_id} {job_title_str} filtered because of stop words. Skipping...')
                 continue
 
             company_name = li.select_one('h4').get_text().strip()
@@ -119,7 +120,7 @@ for url in urls:
                         'meta[name = "pageKey"]')['content'] == 'd_jobs_guest_details':
                     break
                 else:
-                    printLog('      Redirected to Auth page. Retrying...')
+                    print_log('      Redirected to Auth page. Retrying...')
 
             content = job_details.select_one('div.decorated-job-posting__details')
             description = content.select_one('div.description__text--rich').get_text('\n', strip=True)
@@ -142,7 +143,7 @@ for url in urls:
 
             info_string = (job_id, date, job_title, company_name, location, job_link, company_link,
                            description, seniority, employment_type, job_function, industries)
-            printLog(f'{fid: 5d}', info_string)
+            print_log(f'{fid: 5d}', info_string)
             job_list.append(info_string)
             df = pd.concat([pd.DataFrame(
                 [[job_id, date, job_title, company_name, company_link, location, job_link,
